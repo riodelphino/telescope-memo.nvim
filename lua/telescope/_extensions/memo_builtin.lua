@@ -100,8 +100,6 @@ M.list = function(opts)
     }):find()
 end
 
-return M
-
 M.live_grep = function(opts)
   local memo_opts = set_default(opts)
   opts = vim.tbl_extend('force', {cwd = memo_opts.memo_dir}, opts or {})
