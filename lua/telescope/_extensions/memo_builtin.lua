@@ -60,20 +60,29 @@ local function set_default(opts)
   opts = opts or {}
   opts.memo_bin = vim.F.if_nil(opts.memo_bin, 'memo')
   opts.memo_dir = utils.get_lazy_default(opts.memo_dir, detect_memo_dir, opts.memo_bin)
+  opts.add_title = false;
   return opts
 end
 
 M.list = function(opts)
-  opts = set_default(opts) -- 必要なデフォルト値をセット
-  opts.cwd = opts.memo_dir -- Memo のディレクトリを設定
-
-  -- Telescope の find_files を利用
-  builtin.find_files {
-    prompt_title = 'Notes from mattn/memo',
-    cwd = opts.cwd,
-    find_command = { 'memo', 'list', '--format', '{{.File}}' },
-    previewer = true, -- Treesitter 配色を利用
-  }
+    opts = set_default(opts)
+    local find_command
+    if opts.add_title then
+        find_command = { 'memo', 'list', '--format', '{{.File}}' .. ' - ' .. '{{.Title}}' }
+    else
+        find_command = { 'memo', 'list', '--format', '{{.File}}' }
+    end
+    pickers.new(opts, {
+        prompt_title = "Memo List",
+        finder = finders.new_oneshot_job(find_command, opts),
+        sorter = conf.file_sorter(opts),
+        previewer = previewers.new_termopen_previewer({
+            get_command = function(entry)
+                local filepath = entry.value
+                return { "cat", filepath }
+            end,
+        }),
+    }):find()
 end
 
 M.live_grep = function(opts)
