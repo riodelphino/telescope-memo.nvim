@@ -60,44 +60,21 @@ local function set_default(opts)
   opts = opts or {}
   opts.memo_bin = vim.F.if_nil(opts.memo_bin, 'memo')
   opts.memo_dir = utils.get_lazy_default(opts.memo_dir, detect_memo_dir, opts.memo_bin)
-  opts.add_title = false;
+  -- opts.add_title = false;
   return opts
 end
 
-
 M.list = function(opts)
-    opts = set_default(opts)
-    opts.add_title_to_file_list = opts.add_title_to_file_list or false
+  opts = set_default(opts)
+  opts.cwd = opts.memo_dir
 
-    local find_command
-    if opts.add_title_to_file_list then
-        find_command = { opts.memo_bin, "list", "--format", "{{.File}}" .. sep .. "{{.Title}}" }
-    else
-        find_command = { opts.memo_bin, "list", "--format", "{{.File}}" }
-    end
-
-    pickers.new(opts, {
-        prompt_title = "Memo List",
-        finder = finders.new_oneshot_job(find_command, opts),
-        entry_maker = gen_from_memo(opts),
-        sorter = conf.file_sorter(opts),
-        previewer = previewers.new_buffer_previewer({
-            define_preview = function(self, entry, status)
-                local filepath = entry.path
-
-                -- ファイルを読み込む
-                if vim.fn.filereadable(filepath) == 1 then
-                    vim.schedule(function()
-                        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, {})
-                        vim.fn.bufload(filepath)
-                        vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
-                    end)
-                else
-                    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "File not found: " .. filepath })
-                end
-            end,
-        }),
-    }):find()
+  -- Telescope の find_files を利用
+  builtin.find_files {
+    prompt_title = 'Notes from mattn/memo',
+    cwd = opts.cwd,
+    find_command = { 'memo', 'list', '--format', '{{.File}}' },
+    previewer = true, -- Treesitter 配色を利用
+  }
 end
 
 M.live_grep = function(opts)
