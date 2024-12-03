@@ -69,17 +69,21 @@ M.list = function(opts)
 
   pickers.new(opts, {
     prompt_title = 'Notes from mattn/memo',
-    finder = finders.new_oneshot_job({'memo', 'list', '--format', '{{.File}}'..sep..'{{.Title}}'}, opts),
+    -- finder = finders.new_oneshot_job({'memo', 'list', '--format', '{{.File}}'..sep..'{{.Title}}'}, opts),
+    finder = finders.new_oneshot_job({'memo', 'list', '--format', '{{.File}}'}, opts),
     sorter = conf.file_sorter(opts),
-    previewer = previewers.new_termopen_previewer{
-      get_command = function(entry)
+    previewer = previewers.new_buffer_previewer {
+      define_preview = function(self, entry, status)
         local filepath = from_entry.path(entry)
-        if vim.fn.executable'glow' == 1 then
-          return {'glow', filepath}
-        elseif vim.fn.executable'bat' == 1 then
-          return {'bat', '--style', 'header,grid', filepath}
+        if vim.loop.fs_stat(filepath) then
+          vim.schedule(function()
+            vim.api.nvim_buf_set_option(self.state.bufnr, 'filetype', vim.fn.fnamemodify(filepath, ':e'))
+            vim.api.nvim_buf_call(self.state.bufnr, function()
+              vim.cmd('edit ' .. filepath)
+            end)
+          end)
         else
-          return {'cat', filepath}
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { 'File not found: ' .. filepath })
         end
       end,
     },
