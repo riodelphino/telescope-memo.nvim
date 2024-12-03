@@ -74,19 +74,27 @@ M.list = function(opts)
     sorter = conf.file_sorter(opts),
     previewer = previewers.new_buffer_previewer {
       define_preview = function(self, entry, status)
+        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, {})
         local filepath = from_entry.path(entry)
+    
+        -- ファイルが存在するか確認
         if vim.loop.fs_stat(filepath) then
           vim.schedule(function()
-            vim.api.nvim_buf_set_option(self.state.bufnr, 'filetype', vim.fn.fnamemodify(filepath, ':e'))
-            vim.api.nvim_buf_call(self.state.bufnr, function()
-              vim.cmd('edit ' .. filepath)
-            end)
+            -- プレビュー用バッファを再利用
+            if vim.api.nvim_buf_is_valid(self.state.bufnr) then
+              vim.api.nvim_buf_set_option(self.state.bufnr, 'filetype', vim.fn.fnamemodify(filepath, ':e'))
+              vim.api.nvim_buf_call(self.state.bufnr, function()
+                vim.cmd('silent! edit ' .. filepath)
+              end)
+            end
           end)
         else
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { 'File not found: ' .. filepath })
+          vim.schedule(function()
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { 'File not found: ' .. filepath })
+          end)
         end
       end,
-    },
+    }
   }):find()
 end
 
