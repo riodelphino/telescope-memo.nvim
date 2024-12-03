@@ -64,38 +64,16 @@ local function set_default(opts)
 end
 
 M.list = function(opts)
-  opts = set_default(opts)
-  opts.entry_maker = utils.get_lazy_default(opts.entry_maker, gen_from_memo, opts)
+  opts = set_default(opts) -- 必要なデフォルト値をセット
+  opts.cwd = opts.memo_dir -- Memo のディレクトリを設定
 
-  pickers.new(opts, {
+  -- Telescope の find_files を利用
+  builtin.find_files {
     prompt_title = 'Notes from mattn/memo',
-    -- finder = finders.new_oneshot_job({'memo', 'list', '--format', '{{.File}}'..sep..'{{.Title}}'}, opts),
-    finder = finders.new_oneshot_job({'memo', 'list', '--format', '{{.File}}'}, opts),
-    sorter = conf.file_sorter(opts),
-    previewer = previewers.new_buffer_previewer {
-      define_preview = function(self, entry, status)
-        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, {})
-        local filepath = from_entry.path(entry)
-    
-        -- ファイルが存在するか確認
-        if vim.loop.fs_stat(filepath) then
-          vim.schedule(function()
-            -- プレビュー用バッファを再利用
-            if vim.api.nvim_buf_is_valid(self.state.bufnr) then
-              vim.api.nvim_buf_set_option(self.state.bufnr, 'filetype', vim.fn.fnamemodify(filepath, ':e'))
-              vim.api.nvim_buf_call(self.state.bufnr, function()
-                vim.cmd('silent! edit ' .. filepath)
-              end)
-            end
-          end)
-        else
-          vim.schedule(function()
-            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { 'File not found: ' .. filepath })
-          end)
-        end
-      end,
-    }
-  }):find()
+    cwd = opts.cwd,
+    find_command = { 'memo', 'list', '--format', '{{.File}}' },
+    previewer = true, -- Treesitter 配色を利用
+  }
 end
 
 M.live_grep = function(opts)
